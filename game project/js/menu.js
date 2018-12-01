@@ -1,9 +1,9 @@
 var menuState = {
 	create: function() {
 		this.game.world.setBounds(0, 0, 800, this.game.height);
-		var nameLabel = game.add.text(80,80,'My First Game',
+		var nameLabel = game.add.text(220 ,80,'NINJA QUEST',
 									{font:'50px Arial',fill:'#ffffff'});
-		var startLabel = game.add.text(80,game.world.height - 80,'press the W key to start',
+		var startLabel = game.add.text(250,game.world.height - 80,'or press the W key to start',
 									{font:'25px Arial',fill:'#ffffff'});
 		
 		var wkey = game.input.keyboard.addKey(Phaser.Keyboard.W);

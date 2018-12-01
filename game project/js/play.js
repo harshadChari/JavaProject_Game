@@ -9,6 +9,7 @@ var playState = {
 		this.background = game.add.tileSprite(0, 0,800,600, 'sky');
 		
 		this.enemyNames = ['crate','stone'];
+		this.diamondNames = ["diamond_blue","diamond_yellow"];
         //  We're going to be using physics, so enable the Arcade Physics system
 		game.physics.startSystem(Phaser.Physics.ARCADE);	
 		
@@ -47,17 +48,20 @@ var playState = {
 		player.body.collideWorldBounds = false;
 
 		//  Our two animations, walking left and right.
-		/*player.animations.add('left', [0, 1, 2, 3], 10, true);
-		player.animations.add('right', [5, 6, 7, 8], 10, true);
-		player.scale.setTo(1.5, 1.5);*/
-		
-		var anim = player.animations.add('walk');
-		anim.reversed = true;
+		player.animations.add('walk', [0, 1, 2, 3,4,5,6,7,8], 10, true);
+		player.animations.add('jump', [10,11,12,13,14,15,16,17,18], 10, true);
+		player.animations.add('throw', [20,21,22,23,24,25,26,27,28,29], 10, true);
 		player.scale.setTo(0.25, 0.25);
+		
+		/*var anim = player.animations.add('walk');
+		anim.reversed = true;
+		player.scale.setTo(0.25, 0.25);*/
 		//player.animations.play('walk', 12, true);
 		
 		player.checkWorldBounds = true;
 		player.outOfBoundsKill = true;
+		
+		
 		
 		
 	//-----------ENEMIES------------------------------------------------------------------
@@ -79,8 +83,8 @@ var playState = {
 		//  Creates 1 single bullet, using the 'bullet' graphic
 		weapon = game.add.weapon(1, 'bullet');
 		//weapon.scale.setTo(2, 2);
-		weapon.bullets.setAll('scale.x', 0.5);
-		weapon.bullets.setAll('scale.y', 0.5);
+		weapon.bullets.setAll('scale.x', 0.3);
+		weapon.bullets.setAll('scale.y', 0.3);
 		
 		//  The bullet will be automatically killed when it leaves the world bounds
 		weapon.bulletKillType = Phaser.Weapon.KILL_CAMERA_BOUNDS;
@@ -107,7 +111,8 @@ var playState = {
 	//-----------VARIABLES------------------------------------------------------------------		
 		this.enemySpeed = 250;	
 		this.speedUpState = false;
-		//this.enemyCounted = false;
+		this.lastItem="-";
+		
 	
 	//-----------KEYS------------------------------------------------------------------	
 		
@@ -130,7 +135,7 @@ var playState = {
 
     update: function() {
 		//Move background Image
-		this.background.tilePosition.x-=1;
+		this.background.tilePosition.x-=Math.floor(this.enemySpeed*0.009);
 		
 		
 	//--------COLLISSIONS------------------------------------------------------------
@@ -162,17 +167,20 @@ var playState = {
 		player.body.velocity.x = 0;
 		
 		//player.animations.play('right');
-		player.animations.play('walk', 16, true);
+		if(hitPlatform && !fireButton.isDown)
+			player.animations.play('walk', 16, true);
 		
 		if (fireButton.isDown)
 		{
+			player.animations.play('throw', 16, true);
 			weapon.fire();			
 		}		
 		
 		//  Allow the player to jump if they are touching the ground.
-		if (cursors.up.isDown && player.body.touching.down && hitPlatform)
+		if ((cursors.up.isDown && player.body.touching.down && hitPlatform))
 		{
 			player.body.velocity.y = -550;
+			player.animations.play('jump', 16, true);
 		}
 		
 		if(this.game.state.states['menu'].score%10==0 && this.game.state.states['menu'].score > 0 && !this.speedUpState)
@@ -183,12 +191,22 @@ var playState = {
 		
 	},
 	addGroundItems: function(){
-		var ch = getRandomIntInclusive(0,1);
-		if(ch==0){
+		var ch = getRandomIntInclusive(0,5);
+		if(this.lastItem=="enemy")
+		{
+			
+			while(ch==1 || ch==2)
+			{
+				ch = getRandomIntInclusive(0,5);
+			}
+		}
+		if(ch==0 || ch==3 ||ch== 4||ch==5){
 			this.addTreasures();
+			this.lastItem="treasure";
 		}
 		else{
 			this.addEnemies();
+			this.lastItem="enemy";
 		}
 	},
 	addTreasures: function(){	
@@ -197,10 +215,10 @@ var playState = {
 			var y = game.height - (Math.floor(game.height/4));	
 			
 			//random enemy 
-			var enemyName = this.enemyNames[ Math.floor( Math.random() * this.enemyNames.length ) ];
+			var diamondName = this.diamondNames[ Math.floor( Math.random() * this.diamondNames.length ) ];
 			// Create a enemy at the position x and y
-			var Item = game.add.sprite(x, y, 'diamond');
-			Item.type = enemyName;			
+			var Item = game.add.sprite(x, y, diamondName);
+			Item.type = diamondName;			
 		
 			// Add the enemy to our previously created group
 			this.groundItems.add(Item);
@@ -223,8 +241,8 @@ var playState = {
 	addEnemies: function() {			
 			var hole = Math.random()+ 0.5;
 			
-			var x = game.width + 200;
-			var y = game.height - (Math.floor(game.height/2));	
+			var x = game.width + 400;
+			var y = game.height - (Math.floor(game.height/3));	
 			
 			//random enemy 
 			var enemyName = this.enemyNames[ Math.floor( Math.random() * this.enemyNames.length ) ];
@@ -257,8 +275,10 @@ var playState = {
 		if(enemy.type=='crate')
 		{	if(this.game.state.states['boot'].audioEnable)
 				this.explode.play();
+				
 			this.makeSmoke(enemy.x,enemy.y);
 			enemy.destroy();
+			this.decreaseScore(5);
 		}
 		else
 		{
@@ -298,7 +318,15 @@ var playState = {
 		}
 	},
 	getItem: function(player,item){
-		this.increaseScore(10);
+	var val=1;
+	if(item.type=="diamond_blue")
+		val=10;
+	else if(item.type=="diamond_yellow")	
+	{	
+		val=20;
+		
+	}
+		this.increaseScore(val);
 		item.kill();	
 	},
 	countEnemy :function(gate,enemy){
@@ -312,6 +340,7 @@ var playState = {
 
             
                 player.body.x -= platform.body.x - platform.body.prev.x;
+				
             
 
         },
